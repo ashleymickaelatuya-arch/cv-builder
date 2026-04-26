@@ -517,18 +517,14 @@ textarea{min-height:60px;line-height:1.5;}
 }
 
 @media print{
-  body > * { display:none !important; }
-  #cv-doc, #cv-doc * { display:block; visibility:visible; }
+  body * { visibility:hidden; }
+  #cv-doc, #cv-doc * { visibility:visible; }
   #cv-doc {
-    display:block !important;
-    position:fixed !important;
-    top:0 !important; left:0 !important;
-    width:100% !important;
+    position:absolute;
+    left:0; top:0;
+    width:100%;
     box-shadow:none !important;
     border:none !important;
-    margin:0 !important;
-    padding:0 !important;
-    overflow:visible !important;
   }
 }
 </style>
@@ -803,26 +799,24 @@ window.addEventListener('resize',scalePreview);
 
 /* ── SAVE PDF ── */
 function savePDF(){
-  // Open CV content in a clean new window for printing
-  const cvHtml = document.getElementById('cv-doc').outerHTML;
-  const wrapperClass = document.getElementById('cv-wrapper').className;
-  // Collect all stylesheets from the current page
-  const styles = Array.from(document.querySelectorAll('style')).map(s=>s.outerHTML).join('');
-  const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(l=>l.outerHTML).join('');
-  const win = window.open('','_blank','width=900,height=700');
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">${links}${styles}
-  <style>
-    body{margin:0;padding:0;background:#fff;}
-    .cv-doc{box-shadow:none;width:794px;margin:0 auto;}
-    @media print{
-      body{margin:0;}
-      .cv-doc{box-shadow:none;width:100%;}
-    }
-  </style>
-  </head><body><div class="${wrapperClass}">${cvHtml}</div>
-  <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};}<\/script>
-  </body></html>`);
-  win.document.close();
+  // Remove scale transform so CV prints at full size
+  const wrap = document.getElementById('cvScaleWrap');
+  const prevTransform = wrap.style.transform;
+  const prevWidth = wrap.style.width;
+  const prevParentH = wrap.parentElement.style.height;
+  wrap.style.transform = 'none';
+  wrap.style.width = '794px';
+  wrap.parentElement.style.height = 'auto';
+
+  setTimeout(() => {
+    window.print();
+    // Restore after print dialog closes
+    setTimeout(() => {
+      wrap.style.transform = prevTransform;
+      wrap.style.width = prevWidth;
+      wrap.parentElement.style.height = prevParentH;
+    }, 1000);
+  }, 100);
 }
 
 /* ── FAQ ── */
