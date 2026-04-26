@@ -517,12 +517,19 @@ textarea{min-height:60px;line-height:1.5;}
 }
 
 @media print{
-  .site-nav,.hero,.templates-section,.how-section,.tips-section,.faq-section,.why-section,.site-footer,.builder-label,.preview-topbar,.editor,.ad-zone,.builder-tabs{display:none!important;}
-  .builder-section{padding:0;background:white;}
-  .builder-frame{border:none;border-radius:0;display:block;height:auto;}
-  .preview-panel{background:white;padding:0;display:block;}
-  .cv-scale-wrap{transform:none!important;}
-  .cv-doc{box-shadow:none;width:100%;}
+  body > * { display:none !important; }
+  #cv-doc, #cv-doc * { display:block; visibility:visible; }
+  #cv-doc {
+    display:block !important;
+    position:fixed !important;
+    top:0 !important; left:0 !important;
+    width:100% !important;
+    box-shadow:none !important;
+    border:none !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:visible !important;
+  }
 }
 </style>
 </head>
@@ -796,20 +803,26 @@ window.addEventListener('resize',scalePreview);
 
 /* ── SAVE PDF ── */
 function savePDF(){
-  // Reset scale for printing then restore
-  const wrap=document.getElementById('cvScaleWrap');
-  const prev=wrap.style.transform;
-  const prevH=wrap.parentElement.style.height;
-  wrap.style.transform='none';
-  wrap.style.width='794px';
-  wrap.parentElement.style.height='auto';
-  setTimeout(()=>{
-    window.print();
-    setTimeout(()=>{
-      wrap.style.transform=prev;
-      wrap.parentElement.style.height=prevH;
-    },500);
-  },100);
+  // Open CV content in a clean new window for printing
+  const cvHtml = document.getElementById('cv-doc').outerHTML;
+  const wrapperClass = document.getElementById('cv-wrapper').className;
+  // Collect all stylesheets from the current page
+  const styles = Array.from(document.querySelectorAll('style')).map(s=>s.outerHTML).join('');
+  const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(l=>l.outerHTML).join('');
+  const win = window.open('','_blank','width=900,height=700');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">${links}${styles}
+  <style>
+    body{margin:0;padding:0;background:#fff;}
+    .cv-doc{box-shadow:none;width:794px;margin:0 auto;}
+    @media print{
+      body{margin:0;}
+      .cv-doc{box-shadow:none;width:100%;}
+    }
+  </style>
+  </head><body><div class="${wrapperClass}">${cvHtml}</div>
+  <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};}<\/script>
+  </body></html>`);
+  win.document.close();
 }
 
 /* ── FAQ ── */
@@ -901,7 +914,10 @@ function rHarvard(n,t,c,s){
 }
 function rExecutive(n,t,c,s){
   const pts=n.split(' ');const dn=pts.length>1?pts.slice(0,-1).join(' ')+' <em>'+pts[pts.length-1]+'</em>':'<em>'+n+'</em>';
-  return`<div class="hdr"><div class="h-name">${dn}</div>${t?`<div class="h-title">${esc(t)}</div>`:''} ${c.length?`<div class="h-contacts">${c.map(x=>`<div class="hc"><span class="dot"></span>${esc(x)}</div>`).join('')}</div>`:''}</div><div class="body"><div class="main">${s?`<div class="sec"><div class="sec-t">Profile</div><div class="summary-txt">${esc(s)}</div></div>`:''} ${expBlock()}${eduBlock()}</div><div class="side">${skBlock()}${lgBlock()}</div></div>`;
+  const sideContent=skBlock()+lgBlock();
+  const sideHtml=sideContent?`<div class="side">${sideContent}</div>`:'';
+  const bodyStyle=sideContent?'':'grid-template-columns:1fr';
+  return`<div class="hdr"><div class="h-name">${dn}</div>${t?`<div class="h-title">${esc(t)}</div>`:''} ${c.length?`<div class="h-contacts">${c.map(x=>`<div class="hc"><span class="dot"></span>${esc(x)}</div>`).join('')}</div>`:''}</div><div class="body" style="${bodyStyle}"><div class="main" style="${sideContent?'':'border-right:none'}">${s?`<div class="sec"><div class="sec-t">Profile</div><div class="summary-txt">${esc(s)}</div></div>`:''} ${expBlock()}${eduBlock()}</div>${sideHtml}</div>`;
 }
 function rMinimal(n,t,c,s){
   return`<div class="hdr"><div class="h-name">${esc(n)}</div>${t?`<div class="h-title">${esc(t)}</div>`:''} ${c.length?`<div class="h-contacts">${c.map(x=>esc(x)).join('<span style="color:#e0e0e0;margin:0 4px">·</span>')}</div>`:''}</div><div class="body"><div class="side">${s?`<div class="sec"><div class="sec-t">About</div><div class="summary-txt">${esc(s)}</div></div>`:''} ${skBlock()}${lgBlock()}</div><div class="main">${expBlock()}${eduBlock()}</div></div>`;
@@ -916,10 +932,14 @@ function rSidebar(n,t,c,s){
   return`<div class="left-col"><div><div class="h-name">${esc(fn)}${ln?`<em>${esc(ln)}</em>`:''}</div>${t?`<div class="h-title">${esc(t)}</div>`:''}</div>${ctH}${skH}${lgH}</div><div class="right-col">${s?`<div class="sec"><div class="sec-t">Profile</div><div class="summary-txt">${esc(s)}</div></div>`:''} ${expH}${eduH}</div>`;
 }
 function rBold(n,t,c,s){
-  return`<div class="hdr"><div class="h-name">${esc(n)}</div>${t?`<div class="h-title">${esc(t)}</div>`:''} ${c.length?`<div class="h-contacts">${c.map(x=>`<div class="hc">${esc(x)}</div>`).join('')}</div>`:''}</div><div class="body"><div class="main">${s?`<div class="sec"><div class="sec-t">Profile</div><div class="summary-txt">${esc(s)}</div></div>`:''} ${expBlock()}${eduBlock()}</div><div class="side">${skBlock()}${lgBlock()}</div></div>`;
+  const sideContent=skBlock()+lgBlock();
+  const sideHtml=sideContent?`<div class="side">${sideContent}</div>`:'';
+  return`<div class="hdr"><div class="h-name">${esc(n)}</div>${t?`<div class="h-title">${esc(t)}</div>`:''} ${c.length?`<div class="h-contacts">${c.map(x=>`<div class="hc">${esc(x)}</div>`).join('')}</div>`:''}</div><div class="body" style="${sideContent?'':'grid-template-columns:1fr'}"><div class="main">${s?`<div class="sec"><div class="sec-t">Profile</div><div class="summary-txt">${esc(s)}</div></div>`:''} ${expBlock()}${eduBlock()}</div>${sideHtml}</div>`;
 }
 function rSlate(n,t,c,s){
-  return`<div class="hdr"><div class="h-name">${esc(n).toUpperCase()}</div>${t?`<div class="h-title">${esc(t)}</div>`:''} ${c.length?`<div class="h-contacts">${c.map(x=>`<div class="hc">${esc(x)}</div>`).join('')}</div>`:''}</div><div class="body"><div class="main">${s?`<div class="sec"><div class="sec-t">Profile</div><div class="summary-txt">${esc(s)}</div></div>`:''} ${expBlock()}${eduBlock()}</div><div class="side">${skBlock()}${lgBlock()}</div></div>`;
+  const sideContent=skBlock()+lgBlock();
+  const sideHtml=sideContent?`<div class="side">${sideContent}</div>`:'';
+  return`<div class="hdr"><div class="h-name">${esc(n).toUpperCase()}</div>${t?`<div class="h-title">${esc(t)}</div>`:''} ${c.length?`<div class="h-contacts">${c.map(x=>`<div class="hc">${esc(x)}</div>`).join('')}</div>`:''}</div><div class="body" style="${sideContent?'':'grid-template-columns:1fr'}"><div class="main" style="${sideContent?'':'border-right:none'}">${s?`<div class="sec"><div class="sec-t">Profile</div><div class="summary-txt">${esc(s)}</div></div>`:''} ${expBlock()}${eduBlock()}</div>${sideHtml}</div>`;
 }
 function rOpus(n,t,c,s){
   const pts=n.split(' ');const fn=pts.slice(0,-1).join(' ')||n;const ln=pts.length>1?pts[pts.length-1]:'';
